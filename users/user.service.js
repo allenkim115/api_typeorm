@@ -9,7 +9,7 @@ module.exports = {
     delete: _delete
 };
 
-async function getall() {
+async function getAll() {
     return await db.User.findAll(); 
 }
 
@@ -38,5 +38,29 @@ async function update(id, params) {
 
     //validate
     const usernameChanged = params.username && user.username !== params.username;
-    
+    if (usernameChanged && await db.User.findOne({ where: { username: params.username }})) {
+        throw 'Username "' + params.username + '" is already registered';
+    }
+
+    //hash password if it was entered
+    if (params.password) {
+        params.passwordHash = await bcrypt.hash(params.password, 10);
+    }
+
+    //copy params to user and save
+    Object.assign(user, params);
+    await user.save();
+}
+
+async function _delete(id) {
+    const user = await getUser(id);
+    await user.destroy();
+}
+
+// helper functions
+
+async function getUser(id) {
+    const user = await db.User.findByPk(id);
+    if (!user) throw 'User not found';
+    return user;
 }
